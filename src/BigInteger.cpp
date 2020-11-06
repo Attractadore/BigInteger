@@ -55,12 +55,15 @@ BigInteger& BigInteger::operator*=(BigInteger const& other) {
 
     BigInteger accumulator = *this;
     this->zero();
-    for (size_t i = 0; i < other.numBits(); i++) {
+    std::size_t bitsShift = 0;
+    for (std::size_t i = 0; i < other.numBits(); i++, bitsShift++) {
         if (other[i]) {
+            accumulator <<= bitsShift;
             *this += accumulator;
+            bitsShift = 0;
         }
-        accumulator <<= 1;
     }
+
     return *this;
 }
 
