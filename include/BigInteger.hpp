@@ -18,15 +18,14 @@ public:
     BigInteger& zero();
 
 private:
-    using dataType = unsigned char;
-    using operationType = unsigned long long;
-    static_assert(sizeof(operationType) > sizeof(dataType));
+    using dataType = unsigned long long;
     static const std::size_t dataTypeSize = sizeof(dataType);
     static const std::size_t dataTypeBits = dataTypeSize * CHAR_BIT;
 
     std::vector<dataType> data;
 
     void copy(std::integral auto const& intgr);
+    void copy(std::unsigned_integral auto const& intgr);
     BigInteger::dataType getFillByte() const noexcept;
 
     template<typename F>
@@ -51,18 +50,18 @@ public:
     BigInteger& operator|=(BigInteger const& other);
     BigInteger& operator^=(BigInteger const& other);
 
-    friend BigInteger operator+(BigInteger bgIntgr);
-    friend BigInteger operator-(BigInteger bgIntgr);
-    friend BigInteger operator--(BigInteger& bgIntgr, int);
-    friend BigInteger operator++(BigInteger& bgIntgr, int);
-    friend BigInteger operator~(BigInteger bgIntgr);
-
     friend std::ostream& operator<<(std::ostream& os, BigInteger const& bgIntgr);
 
     friend std::weak_ordering operator<=>(BigInteger const& leftBgIntgr, BigInteger const& rightBgIntgr) noexcept;
     friend bool operator==(BigInteger const& leftBgIntgr, BigInteger const& rightBgIntgr) noexcept;
     friend bool operator!=(BigInteger const& leftBgIntgr, BigInteger const& rightBgIntgr) noexcept;
 };
+
+BigInteger operator+(BigInteger bgIntgr);
+BigInteger operator-(BigInteger bgIntgr);
+BigInteger operator--(BigInteger& bgIntgr, int);
+BigInteger operator++(BigInteger& bgIntgr, int);
+BigInteger operator~(BigInteger bgIntgr);
 
 BigInteger operator+(BigInteger leftBgIntgr, BigInteger const& rightBgIntgr);
 BigInteger operator-(BigInteger leftBgIntgr, BigInteger const& rightBgIntgr);
@@ -85,12 +84,10 @@ BigInteger& BigInteger::operator=(std::integral auto const& intgr) {
 }
 
 void BigInteger::copy(std::integral auto const& intgr) {
-    this->data.clear();
-    for (std::size_t i = 0; i < sizeof(intgr) / dataTypeSize; i++) {
-        this->data.push_back(intgr >> (i * dataTypeBits));
-    }
-    if (this->bNegative() and intgr > 0) {
-        this->data.push_back(0);
-    }
+    this->data = {intgr};
+}
+
+void BigInteger::copy(std::unsigned_integral auto const& intgr) {
+    this->data = {intgr, 0};
 }
 

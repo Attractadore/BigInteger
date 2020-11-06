@@ -20,16 +20,22 @@ BigInteger& BigInteger::operator+=(BigInteger const& other) {
         this->data.resize(other.data.size(), thisFillByte);
     }
 
-    operationType carryOver = 0;
+    dataType carryOver = 0;
     std::size_t maxSize = std::max(this->data.size(), other.data.size());
     for (std::size_t i = 0; i < maxSize; i++) {
         assert(i < this->data.size());
         
-        const operationType lv = this->data[i];
-        const operationType rv = (i < other.data.size()) ? (other.data[i]) : (otherFillByte);
+        dataType lv = this->data[i];
+        dataType rv = (i < other.data.size()) ? (other.data[i]) : (otherFillByte);
         this->data[i] += rv + carryOver;
 
-        carryOver = (lv + rv + carryOver) >> dataTypeBits;
+        dataType lTopBit = lv >> (dataTypeBits - 1);
+        dataType rTopBit = rv >> (dataTypeBits - 1);
+        dataType bitMask = ~(1ull << (dataTypeBits - 1));
+        lv &= bitMask;
+        rv &= bitMask;
+        dataType resTopBit = (lv + rv + carryOver) >> (dataTypeBits - 1);
+        carryOver = (lTopBit + rTopBit + resTopBit) >> 1;
     }
 
 
@@ -112,12 +118,12 @@ BigInteger& BigInteger::operator>>=(const std::size_t bits) {
         }
     }
 
-    operationType carryOver = 0;
+    dataType carryOver = 0;
     const std::size_t bitsShift = bits % dataTypeBits;
     if (bitsShift) {
         std::transform(this->data.rbegin(), this->data.rend(), this->data.rbegin(),
                       [&carryOver, &bitsShift](dataType val) {
-                          const operationType tCarryOver = val << (dataTypeBits - bitsShift);
+                          const dataType tCarryOver = val << (dataTypeBits - bitsShift);
                           val = (val >> bitsShift) | carryOver;
                           carryOver = tCarryOver;
                           return val;
@@ -139,12 +145,12 @@ BigInteger& BigInteger::operator<<=(const std::size_t bits) {
         std::fill(this->data.begin(), this->data.begin() + bytesShift, 0);
     }
 
-    operationType carryOver = 0;
+    dataType carryOver = 0;
     const std::size_t bitsShift = bits % dataTypeBits;
     if (bitsShift) {
         std::transform(this->data.begin(), this->data.end(), this->data.begin(),
                 [&carryOver, &bitsShift] (dataType val) {
-            const operationType tCarryOver = val>> (dataTypeBits - bitsShift);
+            const dataType tCarryOver = val>> (dataTypeBits - bitsShift);
             val= (val<< bitsShift) | carryOver;
             carryOver = tCarryOver;
             return val;
@@ -175,8 +181,8 @@ bool operator==(BigInteger const& leftBgIntgr, BigInteger const& rightBgIntgr) n
 
     std::size_t maxSize = std::max(leftBgIntgr.data.size(), rightBgIntgr.data.size());
     for (std::size_t i = 0; i < maxSize; i++) {
-        const BigInteger::operationType lv = (i < leftBgIntgr.data.size()) ? (leftBgIntgr.data[i]) : leftFillByte;
-        const BigInteger::operationType rv = (i < rightBgIntgr.data.size()) ? (rightBgIntgr.data[i]) : rightFillByte;
+        const BigInteger::dataType lv = (i < leftBgIntgr.data.size()) ? (leftBgIntgr.data[i]) : leftFillByte;
+        const BigInteger::dataType rv = (i < rightBgIntgr.data.size()) ? (rightBgIntgr.data[i]) : rightFillByte;
 
         if (lv != rv) {
             return false;
@@ -203,8 +209,8 @@ std::weak_ordering operator<=>(BigInteger const& leftBgIntgr, BigInteger const& 
 
     std::size_t maxSize = std::max(leftBgIntgr.data.size(), rightBgIntgr.data.size());
     for (std::size_t i = 0; i < maxSize; i++) {
-        const BigInteger::operationType lv = (i < leftBgIntgr.data.size()) ? (leftBgIntgr.data[i]) : leftFillByte;
-        const BigInteger::operationType rv = (i < rightBgIntgr.data.size()) ? (rightBgIntgr.data[i]) : rightFillByte;
+        const BigInteger::dataType lv = (i < leftBgIntgr.data.size()) ? (leftBgIntgr.data[i]) : leftFillByte;
+        const BigInteger::dataType rv = (i < rightBgIntgr.data.size()) ? (rightBgIntgr.data[i]) : rightFillByte;
 
         if (lv < rv) {
             return std::weak_ordering::less;
@@ -223,7 +229,7 @@ std::ostream& operator<<(std::ostream& os, BigInteger const& bgIntgr) {
 
     std::for_each(bgIntgr.data.crbegin(), bgIntgr.data.crend(),
                   [&os](const BigInteger::dataType v) {
-                      os << std::internal << std::setw(BigInteger::dataTypeBits / 4) << BigInteger::operationType(v);
+                      os << std::internal << std::setw(BigInteger::dataTypeBits / 4) << BigInteger::dataType(v);
                   });
 
     os.setf(flags);
