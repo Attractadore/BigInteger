@@ -48,19 +48,29 @@ BigInteger& BigInteger::operator+=(BigInteger const& other) {
 }
 
 BigInteger& BigInteger::operator*=(BigInteger const& other) {
-    if (other.bNegative()) {
-        this->negate();
-        return *this *= -other;
+    BigInteger other3 = other + (other << 1);
+    BigInteger V = (other3 & ~other);
+    BigInteger U = (~other3 & other);
+
+    BigInteger posAcc = *this;
+    BigInteger negAcc = this->flip() + 1;
+    this->zero();
+
+    std::size_t posBitsShift = 0;
+    for (std::size_t i = 1; i < V.numBits(); i++, posBitsShift++) {
+        if (V[i]) {
+            posAcc <<= posBitsShift;
+            *this += posAcc;
+            posBitsShift = 0; 
+        }
     }
 
-    BigInteger accumulator = *this;
-    this->zero();
-    std::size_t bitsShift = 0;
-    for (std::size_t i = 0; i < other.numBits(); i++, bitsShift++) {
-        if (other[i]) {
-            accumulator <<= bitsShift;
-            *this += accumulator;
-            bitsShift = 0;
+    std::size_t negBitsShift = 0;
+    for (std::size_t i = 1; i < U.numBits(); i++, negBitsShift++) {
+        if (U[i]) {
+            negAcc <<= negBitsShift;
+            *this += negAcc;
+            negBitsShift = 0; 
         }
     }
 
