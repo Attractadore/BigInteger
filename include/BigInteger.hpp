@@ -40,6 +40,7 @@ public:
     BigInteger& operator++();
     BigInteger& operator--();
     BigInteger& operator+=(BigInteger const& other);
+    BigInteger& operator+=(const std::integral auto other);
     BigInteger& operator-=(BigInteger const& other);
     BigInteger& operator*=(BigInteger const& other);
     BigInteger& operator/=(BigInteger const& other);
@@ -56,6 +57,40 @@ public:
     friend bool operator==(BigInteger const& leftBgIntgr, BigInteger const& rightBgIntgr) noexcept;
     friend bool operator!=(BigInteger const& leftBgIntgr, BigInteger const& rightBgIntgr) noexcept;
 };
+
+#include <assert.h>
+
+BigInteger& BigInteger::operator+=(const std::integral auto other) {
+    assert(this->data.size());
+
+    const bool thisNegative = this->bNegative();
+    const bool otherNegative = other < 0;
+
+    const dataType thisFillByte = this->getFillByte();
+    const dataType otherFillByte = 0 - otherNegative;;
+
+    dataType carryOver = 0;
+    for (std::size_t i = 0; i < this->data.size(); i++) { 
+        dataType lv = this->data[i];
+        dataType rv = (i == 0) ? (other) : (otherFillByte);
+        this->data[i] += rv + carryOver;
+
+        dataType lTopBit = lv >> (dataTypeBits - 1);
+        dataType rTopBit = rv >> (dataTypeBits - 1);
+        dataType bitMask = ~(1ull << (dataTypeBits - 1));
+        lv &= bitMask;
+        rv &= bitMask;
+        dataType resTopBit = (lv + rv + carryOver) >> (dataTypeBits - 1);
+        carryOver = (lTopBit + rTopBit + resTopBit) >> 1;
+    }
+
+    const bool resNegative = this->bNegative();
+    if ((thisNegative or otherNegative) != resNegative) {
+        this->data.push_back(thisFillByte);
+    }
+
+    return *this;
+}
 
 BigInteger operator+(BigInteger bgIntgr);
 BigInteger operator-(BigInteger bgIntgr);

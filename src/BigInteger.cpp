@@ -47,30 +47,69 @@ BigInteger& BigInteger::operator+=(BigInteger const& other) {
     return *this;
 }
 
-BigInteger& BigInteger::operator*=(BigInteger const& other) {
-    BigInteger other3 = other + (other << 1);
-    BigInteger V = (other3 & ~other);
-    BigInteger U = (~other3 & other);
+BigInteger& BigInteger::operator-=(BigInteger const& other) {
+    assert(this->data.size() and other.data.size());
 
-    BigInteger posAcc = *this;
-    BigInteger negAcc = this->flip() + 1;
-    this->zero();
+    const bool thisNegative = this->bNegative();
+    const bool otherNegative = !other.bNegative();
 
-    std::size_t posBitsShift = 0;
-    for (std::size_t i = 1; i < V.numBits(); i++, posBitsShift++) {
-        if (V[i]) {
-            posAcc <<= posBitsShift;
-            *this += posAcc;
-            posBitsShift = 0; 
-        }
+    const dataType thisFillByte = this->getFillByte();
+    const dataType otherFillByte = ~other.getFillByte();
+
+    if (this->data.size() < other.data.size()) {
+        this->data.resize(other.data.size(), thisFillByte);
     }
 
-    std::size_t negBitsShift = 0;
-    for (std::size_t i = 1; i < U.numBits(); i++, negBitsShift++) {
-        if (U[i]) {
-            negAcc <<= negBitsShift;
-            *this += negAcc;
-            negBitsShift = 0; 
+    dataType carryOver = 1;
+    std::size_t maxSize = std::max(this->data.size(), other.data.size());
+    for (std::size_t i = 0; i < maxSize; i++) {
+        assert(i < this->data.size());
+        
+        dataType lv = this->data[i];
+        dataType rv = (i < other.data.size()) ? (~other.data[i]) : (otherFillByte);
+        this->data[i] += rv + carryOver;
+
+        dataType lTopBit = lv >> (dataTypeBits - 1);
+        dataType rTopBit = rv >> (dataTypeBits - 1);
+        dataType bitMask = ~(1ull << (dataTypeBits - 1));
+        lv &= bitMask;
+        rv &= bitMask;
+        dataType resTopBit = (lv + rv + carryOver) >> (dataTypeBits - 1);
+        carryOver = (lTopBit + rTopBit + resTopBit) >> 1;
+    }
+
+
+    const bool resNegative = this->bNegative();
+    if ((thisNegative or otherNegative) != resNegative) {
+        this->data.push_back(thisFillByte);
+    }
+
+    return *this;
+}
+
+BigInteger& BigInteger::operator*=(BigInteger const& other) {
+    BigInteger U = other << 1;
+    U += other;
+    BigInteger V = ~other;
+    V &= U;
+    U.flip();
+    U &= other;
+
+    BigInteger accumulator = *this;
+    this->zero();
+
+    std::size_t bitsShift = 0;
+    std::size_t maxBits = std::max(V.numBits(), U.numBits());
+    for (std::size_t i = 1; i < maxBits; i++, bitsShift++) {
+        if (V[i] or U[i]) {
+            accumulator <<= bitsShift;
+            if (V[i]) {
+                *this += accumulator;
+            }
+            else {
+                *this -= accumulator;
+            }
+            bitsShift = 0; 
         }
     }
 
