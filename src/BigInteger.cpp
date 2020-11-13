@@ -24,7 +24,7 @@ BigInteger& BigInteger::operator+=(BigInteger const& other) {
     std::size_t maxSize = std::max(this->data.size(), other.data.size());
     for (std::size_t i = 0; i < maxSize; i++) {
         assert(i < this->data.size());
-        
+
         dataType lv = this->data[i];
         dataType rv = (i < other.data.size()) ? (other.data[i]) : (otherFillByte);
         this->data[i] += rv + carryOver;
@@ -38,13 +38,16 @@ BigInteger& BigInteger::operator+=(BigInteger const& other) {
         carryOver = (lTopBit + rTopBit + resTopBit) >> 1;
     }
 
-
     const bool resNegative = this->bNegative();
     if ((thisNegative or otherNegative) != resNegative) {
         this->data.push_back(thisFillByte);
     }
 
     return *this;
+}
+
+BigInteger& BigInteger::operator-=(BigInteger const& other) {
+    return *this += (-other);
 }
 
 BigInteger& BigInteger::operator*=(BigInteger const& other) {
@@ -67,12 +70,68 @@ BigInteger& BigInteger::operator*=(BigInteger const& other) {
     return *this;
 }
 
+std::tuple<BigInteger, BigInteger> quotRem(BigInteger leftBI, BigInteger rightBI) {
+    const bool resNegative = leftBI.bNegative() != rightBI.bNegative();
+    if (leftBI.bNegative()) {
+        leftBI.negate();
+    }
+    if (rightBI.bNegative()) {
+        rightBI.negate();
+    }
+
+    BigInteger partQuotBI = 1;
+    while (rightBI <= leftBI) {
+        rightBI <<= 1;
+        partQuotBI <<= 1;
+    }
+
+    BigInteger quotBI = 0;
+    while (partQuotBI > 0) {
+        while (rightBI > leftBI) {
+            rightBI >>= 1;
+            partQuotBI >>= 1;
+        }
+        if (partQuotBI == 0) {
+            break;
+        }
+        leftBI -= rightBI;
+        quotBI += partQuotBI;
+    }
+
+    if (resNegative) {
+        quotBI.negate();
+        leftBI.negate();
+    }
+
+    return {quotBI, leftBI};
+}
+
+std::tuple<BigInteger&, BigInteger> BigInteger::divmod(BigInteger const& other) {
+    BigInteger mod;
+    return (std::tie(*this, mod) = quotRem(*this, other));
+}
+
+std::tuple<BigInteger, BigInteger&> BigInteger::moddiv(BigInteger const& other) {
+    BigInteger quot;
+    return (std::tie(quot, *this) = quotRem(*this, other));
+}
+
+BigInteger& BigInteger::operator/=(BigInteger const& other) {
+    this->divmod(other);
+    return *this;
+}
+
+BigInteger& BigInteger::operator%=(BigInteger const& other) {
+    this->moddiv(other);
+    return *this;
+}
+
 BigInteger operator~(BigInteger bgIntgr) {
     return bgIntgr.flip();
 }
 
-template<typename F>
-requires std::invocable<F, BigInteger::dataType, BigInteger::dataType>
+template <typename F>
+    requires std::invocable<F, BigInteger::dataType, BigInteger::dataType>
 BigInteger& BigInteger::binaryOperationCommon(BigInteger const& other, F const& op) {
     const BigInteger::dataType thisFillByte = this->getFillByte();
     const BigInteger::dataType otherFillByte = other.getFillByte();
@@ -88,8 +147,8 @@ BigInteger& BigInteger::binaryOperationCommon(BigInteger const& other, F const& 
 
         *tit = op(*tit, *oit);
     }
-    std::transform(tit, this->data.end(), tit, [&op, &otherFillByte](const dataType val){return op(val, otherFillByte);});
-    
+    std::transform(tit, this->data.end(), tit, [&op, &otherFillByte](const dataType val) { return op(val, otherFillByte); });
+
     return *this;
 }
 
@@ -115,8 +174,7 @@ BigInteger& BigInteger::operator>>=(const std::size_t bits) {
         if (bytesShift < this->data.size()) {
             std::move(this->data.begin() + bytesShift, this->data.end(), this->data.begin());
             this->data.resize(this->data.size() - bytesShift);
-        }
-        else {
+        } else {
             return this->zero();
         }
     }
@@ -125,12 +183,12 @@ BigInteger& BigInteger::operator>>=(const std::size_t bits) {
     const std::size_t bitsShift = bits % dataTypeBits;
     if (bitsShift) {
         std::transform(this->data.rbegin(), this->data.rend(), this->data.rbegin(),
-                      [&carryOver, &bitsShift](dataType val) {
-                          const dataType tCarryOver = val << (dataTypeBits - bitsShift);
-                          val = (val >> bitsShift) | carryOver;
-                          carryOver = tCarryOver;
-                          return val;
-                      });
+                       [&carryOver, &bitsShift](dataType val) {
+                           const dataType tCarryOver = val << (dataTypeBits - bitsShift);
+                           val = (val >> bitsShift) | carryOver;
+                           carryOver = tCarryOver;
+                           return val;
+                       });
         this->data.back() |= thisFillByte << (dataTypeBits - bits);
     }
 
@@ -152,12 +210,12 @@ BigInteger& BigInteger::operator<<=(const std::size_t bits) {
     const std::size_t bitsShift = bits % dataTypeBits;
     if (bitsShift) {
         std::transform(this->data.begin(), this->data.end(), this->data.begin(),
-                [&carryOver, &bitsShift] (dataType val) {
-            const dataType tCarryOver = val>> (dataTypeBits - bitsShift);
-            val= (val<< bitsShift) | carryOver;
-            carryOver = tCarryOver;
-            return val;
-        });
+                       [&carryOver, &bitsShift](dataType val) {
+                           const dataType tCarryOver = val >> (dataTypeBits - bitsShift);
+                           val = (val << bitsShift) | carryOver;
+                           carryOver = tCarryOver;
+                           return val;
+                       });
         const bool resNegative = this->bNegative();
         if (thisNegative != resNegative or carryOver != (thisFillByte >> (dataTypeBits - bitsShift))) {
             this->data.push_back(carryOver | (thisFillByte << bitsShift));
@@ -178,7 +236,7 @@ bool operator==(BigInteger const& leftBgIntgr, BigInteger const& rightBgIntgr) n
     if (bLeftNegative != bRightNegative) {
         return false;
     }
-    
+
     const BigInteger::dataType leftFillByte = leftBgIntgr.getFillByte();
     const BigInteger::dataType rightFillByte = rightBgIntgr.getFillByte();
 
@@ -195,8 +253,7 @@ bool operator==(BigInteger const& leftBgIntgr, BigInteger const& rightBgIntgr) n
     return true;
 }
 
-std::weak_ordering operator<=>(BigInteger const& leftBgIntgr, BigInteger const& rightBgIntgr) noexcept 
-{
+std::weak_ordering operator<=>(BigInteger const& leftBgIntgr, BigInteger const& rightBgIntgr) noexcept {
     const bool bLeftNegative = leftBgIntgr.bNegative();
     const bool bRightNegative = rightBgIntgr.bNegative();
 
@@ -244,17 +301,14 @@ BigInteger operator+(BigInteger leftBgIntgr, BigInteger const& rightBgIntgr) {
     return leftBgIntgr += rightBgIntgr;
 }
 
-/*
 BigInteger operator-(BigInteger leftBgIntgr, BigInteger const& rightBgIntgr) {
     return leftBgIntgr -= rightBgIntgr;
 }
-*/
 
 BigInteger operator*(BigInteger leftBgIntgr, BigInteger const& rightBgIntgr) {
     return leftBgIntgr *= rightBgIntgr;
 }
 
-/*
 BigInteger operator/(BigInteger leftBgIntgr, BigInteger const& rightBgIntgr) {
     return leftBgIntgr /= rightBgIntgr;
 }
@@ -262,7 +316,6 @@ BigInteger operator/(BigInteger leftBgIntgr, BigInteger const& rightBgIntgr) {
 BigInteger operator%(BigInteger leftBgIntgr, BigInteger const& rightBgIntgr) {
     return leftBgIntgr %= rightBgIntgr;
 }
-*/
 
 BigInteger operator>>(BigInteger bgIntgr, const std::size_t bits) {
     return bgIntgr >>= bits;
@@ -284,7 +337,7 @@ BigInteger operator^(BigInteger leftBgIntgr, BigInteger const& rightBgIntgr) {
     return leftBgIntgr ^= rightBgIntgr;
 }
 
-std::size_t BigInteger::numBits() const noexcept{
+std::size_t BigInteger::numBits() const noexcept {
     return this->data.size() * dataTypeBits;
 }
 
@@ -299,11 +352,11 @@ BigInteger& BigInteger::negate() {
 }
 
 BigInteger& BigInteger::flip() {
-    std::transform(this->data.begin(), this->data.end(), this->data.begin(), [](auto val) {return ~val;});
+    std::transform(this->data.begin(), this->data.end(), this->data.begin(), [](auto val) { return ~val; });
     return *this;
 }
 
-bool BigInteger::operator[](const std::size_t i) const noexcept{
+bool BigInteger::operator[](const std::size_t i) const noexcept {
     const std::size_t byteI = i / dataTypeBits;
     const std::size_t bitI = i % dataTypeBits;
     return (byteI < this->data.size()) ? (this->data[byteI] & (1ull << bitI)) : (this->bNegative());

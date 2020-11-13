@@ -1,9 +1,9 @@
 #pragma once
 
-#include <concepts>
-#include <vector>
 #include <climits>
+#include <concepts>
 #include <iostream>
+#include <vector>
 
 class BigInteger {
 public:
@@ -17,6 +17,9 @@ public:
     BigInteger& flip();
     BigInteger& zero();
 
+    std::tuple<BigInteger&, BigInteger> divmod(BigInteger const& divisor);
+    std::tuple<BigInteger, BigInteger&> moddiv(BigInteger const& divisor);
+
 private:
     using dataType = unsigned long long;
     static const std::size_t dataTypeSize = sizeof(dataType);
@@ -28,8 +31,8 @@ private:
     void copy(std::unsigned_integral auto const& intgr);
     BigInteger::dataType getFillByte() const noexcept;
 
-    template<typename F>
-    requires std::invocable<F, dataType, dataType>
+    template <typename F>
+        requires std::invocable<F, dataType, dataType>
     BigInteger& binaryOperationCommon(BigInteger const& other, F const& op);
 
 public:
@@ -75,7 +78,7 @@ BigInteger operator|(BigInteger leftBgIntgr, BigInteger const& rightBgIntgr);
 BigInteger operator^(BigInteger leftBgIntgr, BigInteger const& rightBgIntgr);
 
 BigInteger::BigInteger(std::integral auto const& intgr) {
-    this->copy(intgr);   
+    this->copy(intgr);
 }
 
 BigInteger& BigInteger::operator=(std::integral auto const& intgr) {
@@ -90,4 +93,3 @@ void BigInteger::copy(std::integral auto const& intgr) {
 void BigInteger::copy(std::unsigned_integral auto const& intgr) {
     this->data = {intgr, 0};
 }
-
