@@ -71,6 +71,10 @@ BigInteger& BigInteger::operator*=(BigInteger const& other) {
 }
 
 std::tuple<BigInteger, BigInteger> quotRem(BigInteger leftBI, BigInteger rightBI) {
+    if (rightBI == 0) {
+        throw std::domain_error("BigInteger division by 0");
+    }
+
     const bool resNegative = leftBI.bNegative() != rightBI.bNegative();
     if (leftBI.bNegative()) {
         leftBI.negate();
@@ -269,8 +273,9 @@ std::weak_ordering operator<=>(BigInteger const& leftBgIntgr, BigInteger const& 
 
     std::size_t maxSize = std::max(leftBgIntgr.data.size(), rightBgIntgr.data.size());
     for (std::size_t i = 0; i < maxSize; i++) {
-        const BigInteger::dataType lv = (i < leftBgIntgr.data.size()) ? (leftBgIntgr.data[i]) : leftFillByte;
-        const BigInteger::dataType rv = (i < rightBgIntgr.data.size()) ? (rightBgIntgr.data[i]) : rightFillByte;
+        std::size_t j = maxSize - i - 1;
+        const BigInteger::dataType lv = (j < leftBgIntgr.data.size()) ? (leftBgIntgr.data[j]) : leftFillByte;
+        const BigInteger::dataType rv = (j < rightBgIntgr.data.size()) ? (rightBgIntgr.data[j]) : rightFillByte;
 
         if (lv < rv) {
             return std::weak_ordering::less;
